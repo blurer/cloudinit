@@ -1,0 +1,51 @@
+#!/bin/sh
+
+apt update -y
+apt upgrade -y
+
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+
+apt install -y \
+	vim \
+	git \
+	curl \
+	htop \
+	ansible \
+	unzip \
+	zsh \
+	python3-pip \
+	python3-setuptools \
+	fail2ban \
+	docker-compose
+
+#zsh 
+wget https://raw.githubusercontent.com/blurer/myBS/master/zshrc
+mv zshrc /home/bl/.zshrc
+
+# system stuff
+sudo ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
+systemctl enable fail2ban
+systemctl enable docker
+
+# user stuff
+useradd bl
+usermod -aG docker bl
+usermod -aG sudo bl
+mkhomedir_helper bl
+mkdir /home/bl/.ssh/
+wget https://raw.githubusercontent.com/blurer/myBS/master/authorized_keys 
+mv authorized_keys /home/bl/.ssh/authorized_keys
+chmod 600 /home/bl/.ssh/authorized_keys
+chown -R bl:bl /home/bl/.ssh/
+
+# fix dns (required for pihole)
+sed -r -i.orig 's/ALL=(ALL:ALL) ALL/ALL=(ALL:ALL) NOPASSWD: ALL/g' /etc/sudoers
+sed -r -i.orig 's/#?DNSStubListener=yes/DNSStubListener=no/g' /etc/systemd/resolved.conf      
+sed -r -i.orig 's/#DNS=/DNS=1.1.1.1/g' /etc/systemd/resolved.conf      
+sed -r -i.orig 's/#FallbackDNS=/DNS=8.8.8.8/g' /etc/systemd/resolved.conf     
+sh -c 'rm /etc/resolv.conf && ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf'
+systemctl restart systemd-resolved
+
+#add block storage
+echo "/dev/vdb1 /mnt/hdd ext4 defaults 0 1" >> /etc/fstab
